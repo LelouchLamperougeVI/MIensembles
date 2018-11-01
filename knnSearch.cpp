@@ -49,29 +49,62 @@ int main(){
         printf("\n");
 
         for(i = 0; i < count; i++) {
-                left = 0; buff = DBL_MAX; d_left = buff;
-                while((i-left) > -1 && (buff <= d_left)) {
-                        d_left = buff;
-                        left++;
-                        buff = fmax(A[i-left] - A[i], abs(A[M+i-left] - A[M+i]));
+                if(i > 0) {
+                        left = 1;
+                        if(A[M+i] == 0.0) {
+                                while((i-left) > -1  && A[M+i-left] != 0.0) left++;
+                                if(A[M+i-left] != 0.0) {
+                                        d_left = DBL_MAX;
+                                        left=0;
+                                }else{
+                                        d_left = A[i-left] - A[i];
+                                }
+                        }else{
+                                d_left = fmax(A[i-left] - A[i], std::abs(A[M+i-left] - A[M+i]));
+                                buff = d_left;
+                                while((i-left) > 0 && (buff <= d_left)) {
+                                        d_left = buff;
+                                        left++;
+                                        buff = fmax(A[i-left] - A[i], std::abs(A[M+i-left] - A[M+i]));
+                                }
+                                if(buff <= d_left)
+                                        d_left = buff;
+                                else
+                                        left--;
+                        }
+                }else{
+                        left = 0;
+                        d_left = DBL_MAX;
                 }
 
-                right = 0; buff = DBL_MAX; d_right = buff;
-                while((i+right) < count && (buff <= d_right)) {
-                        d_right = buff;
-                        right++;
-                        buff = fmax(A[i+right] - A[i], abs(A[M+i+right] - A[M+i]));
+                if(i < count-1) {
+                        right = 1;
+                        d_right = fmax(A[i] - A[i+right], std::abs(A[M+i+right] - A[M+i]));
+                        buff = d_right;
+                        while((i+right) < (count-1) && (buff <= d_right)) {
+                                d_right = buff;
+                                right++;
+                                buff = fmax(A[i] - A[i+right], std::abs(A[M+i+right] - A[M+i]));
+                        }
+                        if(buff <= d_right)
+                                d_right = buff;
+                        else
+                                right--;
+                }else{
+                        right = 0;
+                        d_right = DBL_MAX;
                 }
 
                 buff = fmin(d_left, d_right);
-                if(buff == d_left) {
+                // printf("%d %d, %f\n", left, right, buff);
+                printf("%d %d, %f\t %f\n", left, right, d_left, d_right);
+                if(buff == d_left)
                         while(right > 0 && (A[i+right] > d_left)) right--;
-                }else{
+                else
                         while(left > 0 && (A[i-left] > d_right)) left--;
-                }
                 // ret[block[i].index] = left + right;
                 ret[i] = left + right;
-                printf("%d %d\n", left, right);
+                // printf("%d %d\n", left, right);
         }
 
         for(i = 0; i < M; i++) printf("%d ", ret[i]);
