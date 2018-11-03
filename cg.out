@@ -1,30 +1,34 @@
-==19643== Callgrind, a call-graph generating cache profiler
-==19643== Copyright (C) 2002-2015, and GNU GPL'd, by Josef Weidendorfer et al.
-==19643== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
-==19643== Command: ./a.out
-==19643== Parent PID: 9486
-==19643== 
-==19643== For interactive control, run 'callgrind_control -h'.
-==19643== 
-==19643== Events    : Ir Dr Dw I1mr D1mr D1mw ILmr DLmr DLmw Bc Bcm Bi Bim
-==19643== Collected : 607894 139483 79326 1307 3057 714 1227 2071 575 75258 5694 824 175
-==19643== 
-==19643== I   refs:      607,894
-==19643== I1  misses:      1,307
-==19643== LLi misses:      1,227
-==19643== I1  miss rate:    0.22%
-==19643== LLi miss rate:    0.20%
-==19643== 
-==19643== D   refs:      218,809  (139,483 rd + 79,326 wr)
-==19643== D1  misses:      3,771  (  3,057 rd +    714 wr)
-==19643== LLd misses:      2,646  (  2,071 rd +    575 wr)
-==19643== D1  miss rate:     1.7% (    2.2%   +    0.9%  )
-==19643== LLd miss rate:     1.2% (    1.5%   +    0.7%  )
-==19643== 
-==19643== LL refs:         5,078  (  4,364 rd +    714 wr)
-==19643== LL misses:       3,873  (  3,298 rd +    575 wr)
-==19643== LL miss rate:      0.5% (    0.4%   +    0.7%  )
-==19643== 
-==19643== Branches:       76,082  ( 75,258 cond +    824 ind)
-==19643== Mispredicts:     5,869  (  5,694 cond +    175 ind)
-==19643== Mispred rate:      7.7% (    7.6%     +   21.2%   )
+==50== Callgrind, a call-graph generating cache profiler
+==50== Copyright (C) 2002-2017, and GNU GPL'd, by Josef Weidendorfer et al.
+==50== Using Valgrind-3.13.0 and LibVEX; rerun with -h for copyright info
+==50== Command: ./a.out
+==50== Parent PID: 42
+==50== 
+--50-- warning: L3 cache found, using its data for the LL simulation.
+--50-- warning: specified LL cache: line_size 64  assoc 16  total_size 12,582,912
+--50-- warning: simulated LL cache: line_size 64  assoc 24  total_size 12,582,912
+==50== For interactive control, run 'callgrind_control -h'.
+==50== error calling PR_SET_PTRACER, vgdb might block
+==50== 
+==50== Events    : Ir Dr Dw I1mr D1mr D1mw ILmr DLmr DLmw Bc Bcm Bi Bim
+==50== Collected : 434664 106206 46723 1320 2713 708 1292 2153 613 75639 6149 2713 230
+==50== 
+==50== I   refs:      434,664
+==50== I1  misses:      1,320
+==50== LLi misses:      1,292
+==50== I1  miss rate:    0.30%
+==50== LLi miss rate:    0.30%
+==50== 
+==50== D   refs:      152,929  (106,206 rd + 46,723 wr)
+==50== D1  misses:      3,421  (  2,713 rd +    708 wr)
+==50== LLd misses:      2,766  (  2,153 rd +    613 wr)
+==50== D1  miss rate:     2.2% (    2.6%   +    1.5%  )
+==50== LLd miss rate:     1.8% (    2.0%   +    1.3%  )
+==50== 
+==50== LL refs:         4,741  (  4,033 rd +    708 wr)
+==50== LL misses:       4,058  (  3,445 rd +    613 wr)
+==50== LL miss rate:      0.7% (    0.6%   +    1.3%  )
+==50== 
+==50== Branches:       78,352  ( 75,639 cond +  2,713 ind)
+==50== Mispredicts:     6,379  (  6,149 cond +    230 ind)
+==50== Mispred rate:      8.1% (    8.1%     +    8.5%   )
