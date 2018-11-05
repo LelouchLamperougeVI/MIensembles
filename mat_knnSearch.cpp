@@ -1,23 +1,9 @@
-#include <cmath>
-#include <float.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <mex.h>
 #include <matrix.h>
+#include "knnSearch.h"
+#include "MI.h"
 
-struct blockHead {
-        double block;
-        int index;
-};
-
-int compare( const void* a, const void* b){
-        if( ((double) ((struct blockHead*) b)->block) < ((double) ((struct blockHead*) a)->block) )
-                return -1;
-        else if( ((double) ((struct blockHead*) b)->block) > ((double) ((struct blockHead*) a)->block) )
-                return 1;
-        else
-                return 0;
-}
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if(nrhs < 1)
@@ -34,99 +20,52 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if(N < 2)
                 mexErrMsgTxt("At least 2 neurons are required to make comparison");
 
-        int i, j, k, count, left, right, n;
-        int accum = 0;
+        int i, j, k, accum = 0;
 
-        double d_left, d_right, buff;
-        double *A = (double *) malloc(M * 2 * sizeof(double));
+        int *index = (int *) malloc(M*N * sizeof(int));
+        int *count = (int *) malloc(N * sizeof(int));
+        double *sorted = (double *) malloc(M*N * sizeof(double));
+        struct blockHead *block = (struct blockHead*) malloc(M * sizeof(struct blockHead));
 
-        int dims[2] = {M, N*(N-1)/2};
-        plhs[0] = mxCreateNumericArray(2, dims, mxINT32_CLASS, mxREAL);
-        int *ret = (int*) mxGetPr(plhs[0]);
-        struct blockHead* block = (struct blockHead*) malloc(M * sizeof(struct blockHead));
+        double *A = (double *) malloc(M * sizeof(double));
+        int *ret = (int *) malloc(M * 2 * sizeof(int));
 
-        for(k = 0; k < N-1; k++) {
-                for(i = 0; i < M; i++) {
-                        block[i].block = deconv[k*M + i];
-                        block[i].index = i;
+        for(i = 0; i < N; i++) {
+                for(j = 0; j < M; j++) {
+                        block[j].block = deconv[i*M + j];
+                        block[j].index = j;
                 }
                 qsort(block, M, sizeof(struct blockHead), compare);
-
-                count = 0;
-                while(block[count].block > 0) {
-                        A[count] = block[count].block;
-                        count++;
+                j = 0;
+                while((M-j) && (block[j].block != 0.0)) { //reorganize memory for sequential addresssing
+                        index[i*M + j] = block[j].index;
+                        sorted[i*M + j] = block[j].block;
+                        j++;
                 }
-                // for(i = 0; i < M; i++) mexPrintf("%f ", A[i]); mexPrintf("\n");
+                count[i] = j;
+        }
+        free(block);
 
-                for(n = k; n < N-1; n++) {
-                        for(i = 0; i < count; i++)
-                                A[M+i] = deconv[(n+1)*M + block[i].index];
+        // int dims[2] = {M, N*(N-1)/2};
+        plhs[0] = mxCreateDoubleMatrix(1, N*(N-1)/2, mxREAL);
+        double *I = mxGetPr(plhs[0]);
 
-                        for(i = 0; i < count; i++) { //jump once at the end
-                                if(i) { // jump once at beginning
-                                        left = 1;
-                                        if(A[M+i] == 0.0) { // low # jumps since most data points are in marginal space
-                                                while((i-left) && A[M+i-left] != 0.0) left++;
-                                                if(A[M+i-left] == 0.0) // most points won't exceed limits
-                                                        d_left = A[i-left] - A[i];
-                                                else
-                                                        d_left = DBL_MAX;
-                                        }else{
-                                                d_left = fmax(A[i-left] - A[i], std::abs(A[M+i-left] - A[M+i]));
-                                                buff = d_left;
-                                                while((i-left) && (buff <= d_left)) {
-                                                        d_left = buff;
-                                                        left++;
-                                                        buff = fmax(A[i-left] - A[i], std::abs(A[M+i-left] - A[M+i]));
-                                                }
-                                                if(buff <= d_left)
-                                                        d_left = buff;
-                                                else
-                                                        left--;
-                                        }
-                                }else{
-                                        left = 0;
-                                        d_left = DBL_MAX;
-                                }
+        for(i = 0; i < N; i++) {
+                for(j = i + 1; j < N; j++) {
+                        for(k = 0; k < count[i]; k++)
+                                A[k] = deconv[M*j + index[i*M + k]];
+                        knnSearch(sorted+(i*M), index+(i*M), A, count[i], ret);
 
-                                if(count-1-i) {
-                                        right = 1;
-                                        if(A[M+i] == 0.0) {
-                                                while((count-1-i-right) && A[M+i+right] != 0.0) right++;
-                                                if(A[M+i+right] == 0.0)
-                                                        d_right = A[i] - A[i+right];
-                                                else
-                                                        d_right = DBL_MAX;
-                                        }else{
-                                                d_right = fmax(A[i] - A[i+right], std::abs(A[M+i+right] - A[M+i]));
-                                                buff = d_right;
-                                                while((count-1-i-right) && (buff <= d_right)) {
-                                                        d_right = buff;
-                                                        right++;
-                                                        buff = fmax(A[i] - A[i+right], std::abs(A[M+i+right] - A[M+i]));
-                                                }
-                                                if(buff <= d_right)
-                                                        d_right = buff;
-                                                else
-                                                        right--;
-                                        }
-                                }else{
-                                        right = 0;
-                                        d_right = DBL_MAX;
-                                }
+                        for(k = 0; k < count[j]; k++)
+                                A[k] = deconv[M*i + index[j*M + k]];
+                        knnSearch(sorted+(j*M), index+(j*M), A, count[j], ret+M);
 
-                                buff = fmin(d_left, d_right);
-                                if(buff == d_left)
-                                        while(right && (A[i] - A[i+right] > d_left)) right--;
-                                else
-                                        while(left && (A[i-left] - A[i] > d_right)) left--;
-
-                                // ret[accum*M + i] = left + right;
-                                ret[accum*M + block[i].index] = left + right;
-                        }
+                        I[accum] = MI(ret, M, count[i], count[j]);
                         accum++;
+                        for(k = 0; k < count[i]; k++) ret[index[i*M + k]] = 0.0; //reset array elements
+                        for(k = 0; k < count[j]; k++) ret[M + index[j*M + k]] = 0.0;
                 }
         }
-        free(A); free(block);
+
+        free(A); free(ret); free(index); free(count); free(sorted);
 }

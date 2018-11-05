@@ -1,5 +1,14 @@
 #include "knnSearch.h"
 
+int compare( const void* a, const void* b){
+        if( ((double) ((struct blockHead*) b)->block) < ((double) ((struct blockHead*) a)->block) )
+                return -1;
+        else if( ((double) ((struct blockHead*) b)->block) > ((double) ((struct blockHead*) a)->block) )
+                return 1;
+        else
+                return 0;
+}
+
 void knnSearch(double *sorted, int *index, double *A, int count, int *ret){
         int i, left, right;
         double d_left, d_right, buff;
@@ -14,19 +23,14 @@ void knnSearch(double *sorted, int *index, double *A, int count, int *ret){
                                         d_left = DBL_MAX;
                         }else{
                                 d_left = fmax(sorted[i-left] - sorted[i], std::abs(A[i-left] - A[i]));
-                                buff = d_left;
-                                while((i-left) && (buff <= d_left)) {
-                                        d_left = buff;
-                                        left++;
+                                left++;
+                                while((i-left+1) && ((sorted[i-left] - sorted[i]) <= d_left)) {
                                         buff = fmax(sorted[i-left] - sorted[i], std::abs(A[i-left] - A[i]));
+                                        if(buff < d_left) d_left = buff;
+                                        left++;
                                 }
-                                if(buff <= d_left)
-                                        d_left = buff;
-                                // else
-                                        // left--;
                         }
                 }else{
-                        // left = 0;
                         d_left = DBL_MAX;
                 }
 
@@ -40,19 +44,14 @@ void knnSearch(double *sorted, int *index, double *A, int count, int *ret){
                                         d_right = DBL_MAX;
                         }else{
                                 d_right = fmax(sorted[i] - sorted[i+right], std::abs(A[i+right] - A[i]));
-                                buff = d_right;
-                                while((count-1-i-right) && (buff <= d_right)) {
-                                        d_right = buff;
-                                        right++;
+                                right++;
+                                while((count-i-right) && ((sorted[i] - sorted[i+right]) <= d_right)) {
                                         buff = fmax(sorted[i] - sorted[i+right], std::abs(A[i+right] - A[i]));
+                                        if(buff < d_right) d_right = buff;
+                                        right++;
                                 }
-                                if(buff <= d_right)
-                                        d_right = buff;
-                                // else
-                                        // right--;
                         }
                 }else{
-                        // right = 0;
                         d_right = DBL_MAX;
                 }
 
@@ -60,10 +59,6 @@ void knnSearch(double *sorted, int *index, double *A, int count, int *ret){
                 left = 0; right = 0;
                 while((i-left+1) && (sorted[i-left] - sorted[i]) < buff) left++;
                 while((count-i-right) && (sorted[i] - sorted[i+right]) < buff) right++;
-                // if(buff == d_left)
-                        // while(right && (sorted[i] - sorted[i+right] > d_left)) right--;
-                // else
-                        // while(left && (sorted[i-left] - sorted[i] > d_right)) left--;
 
                 ret[index[i]] = left + right - 1;
         }
