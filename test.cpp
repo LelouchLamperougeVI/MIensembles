@@ -5,5 +5,5 @@
 int main(int argc, char const *argv[]) {
   int a = 5;
   // double b = 4.6;
-        printf("%f\n", boost::math::digamma(a));
+        printf("%f\n", log(a));
 }
