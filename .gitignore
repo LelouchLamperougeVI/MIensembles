@@ -1,3 +1,4 @@
 *.exe
 *.out*
+*.mexw64
 boost_1_68_0/

@@ -40,12 +40,20 @@ int main(){
                         for(k = 0; k < count[i]; k++)
                                 A[k] = deconv[M*j + index[i*M + k]];
                         knnSearch(sorted+(i*M), index+(i*M), A, count[i], ret);
+                        for(k = 0; k < M; k++) printf("%f ", sorted[i*M + k]); printf("\n");
+                        for(k = 0; k < M; k++) printf("%f ", A[k]); printf("\n");
 
                         for(k = 0; k < count[j]; k++)
                                 A[k] = deconv[M*i + index[j*M + k]];
                         knnSearch(sorted+(j*M), index+(j*M), A, count[j], ret+M);
 
-                        printf("%f ", MI(ret, M, count[i], count[j]));
+                        for(k = 0; k < M; k++) printf("%f ", sorted[j*M + k]); printf("\n");
+                        for(k = 0; k < M; k++) printf("%f ", A[k]); printf("\n");
+
+                        for(k = 0; k < count[i]; k++) printf("%d ", ret[index[i*M+k]]); printf("\n");
+                        for(k = 0; k < count[j]; k++) printf("%d ", ret[M+ index[j*M+k]]); printf("\n");
+
+                        // printf("%f ", MI(ret, M, count[i], count[j]));
 
                         for(k = 0; k < count[i]; k++) ret[index[i*M + k]] = 0.0; //reset array elements
                         for(k = 0; k < count[j]; k++) ret[M + index[j*M + k]] = 0.0;

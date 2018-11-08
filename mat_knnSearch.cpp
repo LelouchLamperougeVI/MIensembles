@@ -28,7 +28,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         struct blockHead *block = (struct blockHead*) malloc(M * sizeof(struct blockHead));
 
         double *A = (double *) malloc(M * sizeof(double));
-        int *ret = (int *) malloc(M * 2 * sizeof(int));
+        int *ret = (int *) calloc(M * 2, sizeof(int));
 
         for(i = 0; i < N; i++) {
                 for(j = 0; j < M; j++) {

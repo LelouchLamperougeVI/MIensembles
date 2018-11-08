@@ -4,8 +4,8 @@ double MI(int *ret, int M, int c1, int c2){
         double I = 0.0;
         int k0 = 0;
 
-        double n1 = boost::math::digamma(M - c1);
-        double n2 = boost::math::digamma(M - c2);
+        double n1 = boost::math::digamma(M - c1 -1);
+        double n2 = boost::math::digamma(M - c2 -1);
 
         for(int i = 0; i < M; i++) {
                 if((ret[i] + ret[M+i]) == 0.0)

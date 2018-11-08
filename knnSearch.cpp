@@ -56,10 +56,10 @@ void knnSearch(double *sorted, int *index, double *A, int count, int *ret){
                 }
 
                 buff = fmin(d_left, d_right);
-                left = 0; right = 0;
-                while((i-left+1) && (sorted[i-left] - sorted[i]) < buff) left++;
-                while((count-i-right) && (sorted[i] - sorted[i+right]) < buff) right++;
+                left = 1; right = 1;
+                while((i-left+1) && (sorted[i-left] - sorted[i]) <= buff) left++;
+                while((count-i-right) && (sorted[i] - sorted[i+right]) <= buff) right++;
 
-                ret[index[i]] = left + right - 1;
+                ret[index[i]] = left + right - 2;
         }
 }
