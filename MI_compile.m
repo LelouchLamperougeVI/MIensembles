@@ -1,1 +1,1 @@
-mex -I./boost_1_68_0/ mat_knnSearch.cpp MI.cpp knnSearch.cpp
+mex CXXFLAGS='$CXXFLAGS -std=c++11 -pthread' -I./boost_1_68_0/ mat_knnSearch.cpp MI.cpp knnSearch.cpp
