@@ -1,7 +1,0 @@
-I=mat_knnSearch(deconv);
-I=double(I);
-for i=1:size(I,2)
-    I(I(:,i)==0,i)=sum(I(:,i)==0);
-end
-
-I=psi(1)+psi(size(deconv,1))+mean(psi(I));
