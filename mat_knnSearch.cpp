@@ -4,28 +4,39 @@
 #include "knnSearch.h"
 #include "MI.h"
 #include <thread>
+#include <chrono>
 
-#define NUM_THREADS 8 //tweek number of threads for best performance for distinct systems
+#define NUMBER_OF_THREADS 16 //tweek the number of threads for best performance on your own system
 
-int M, N, *index, *count, *ret, accum = 0;
+bool *worker;
+int M, N, *index, *count, *ret;
 double *deconv, *sorted, *A, *I;
 
-void opRow(int i){
+int triang(int n){ //calculate triangular number
+        int t = 0;
+        for(int i = 1; i < n; i++)
+                t += i;
+        return t;
+}
+
+void opRow(int i, int thread_id){
         int j, k;
+        int carry = i*(N-1) - triang(i);
         for(j = i + 1; j < N; j++) {
                 for(k = 0; k < count[i]; k++)
-                        A[k] = deconv[M*j + index[i*M + k]];
-                knnSearch(sorted+(i*M), index+(i*M), A, count[i], ret);
+                        A[thread_id*M + k] = deconv[M*j + index[i*M + k]];
+                knnSearch(sorted+(i*M), index+(i*M), A+(thread_id*M), count[i], ret+(thread_id*M*2));
 
                 for(k = 0; k < count[j]; k++)
-                        A[k] = deconv[M*i + index[j*M + k]];
-                knnSearch(sorted+(j*M), index+(j*M), A, count[j], ret+M);
+                        A[thread_id*M + k] = deconv[M*i + index[j*M + k]];
+                knnSearch(sorted+(j*M), index+(j*M), A+(thread_id*M), count[j], ret+(thread_id*M*2)+M);
 
-                I[accum] = MI(ret, M, count[i], count[j]);
-                accum++;
-                for(k = 0; k < count[i]; k++) ret[index[i*M + k]] = 0.0; //reset array elements
-                for(k = 0; k < count[j]; k++) ret[M + index[j*M + k]] = 0.0;
+                I[carry] = MI(ret+(thread_id*M*2), M, count[i], count[j]);
+                carry++;
+                for(k = 0; k < count[i]; k++) ret[thread_id*M*2 + index[i*M + k]] = 0.0; //reset array elements
+                for(k = 0; k < count[j]; k++) ret[thread_id*M*2 + M + index[j*M + k]] = 0.0;
         }
+        worker[thread_id] = true;
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
@@ -43,6 +54,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if(N < 2)
                 mexErrMsgTxt("At least 2 neurons are required to make comparison");
 
+        static int NUM_THREADS = NUMBER_OF_THREADS;
+        if (NUM_THREADS > N)
+                NUM_THREADS = N - 1;
+
         int i, j, k;
 
         index = (int *) malloc(M*N * sizeof(int));
@@ -50,8 +65,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         sorted = (double *) malloc(M*N * sizeof(double));
         struct blockHead *block = (struct blockHead*) malloc(M * sizeof(struct blockHead));
 
-        A = (double *) malloc(M * sizeof(double));
-        ret = (int *) calloc(M * 2, sizeof(int));
+        A = (double *) malloc(M * sizeof(double) * NUM_THREADS);
+        ret = (int *) calloc(M * 2 * NUM_THREADS, sizeof(int));
 
         for(i = 0; i < N; i++) {
                 for(j = 0; j < M; j++) {
@@ -69,26 +84,33 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
         free(block);
 
-        // int dims[2] = {M, N*(N-1)/2};
         plhs[0] = mxCreateDoubleMatrix(1, N*(N-1)/2, mxREAL);
         I = mxGetPr(plhs[0]);
 
         std::thread t[NUM_THREADS];
-        int *last_elem = (int *) malloc(NUM_THREADS * sizeof(int));
+        worker = (bool *) malloc(NUM_THREADS * sizeof(bool));
         for(i = 0; i < NUM_THREADS; i++) {
-                t[i] = std::thread(opRow, i);
+                worker[i] = false;
+                t[i] = std::thread(opRow, i, i);
                 t[i].detach();
-                last_elem[i] = (i + 1)*M - i - 1;
         }
         int next_row = NUM_THREADS;
 
-        while(next_row < N){
-
+        i = 0;
+        while(next_row < (N-1)) {
+                if(worker[i]) {
+                        worker[i] = false;
+                        t[i] = std::thread(opRow, next_row, i);
+                        t[i].detach();
+                        next_row++;
+                }
+                i = (i+1) % NUM_THREADS;
         }
 
-        // for(i = 0; i < N; i++) {
-        //         opRow(i);
-        // }
+        for(i = 0; i < NUM_THREADS; i++) {
+                while(!worker[i])
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
 
-        free(A); free(ret); free(index); free(count); free(sorted); free(last_elem);
+        free(A); free(ret); free(index); free(count); free(sorted);
 }
