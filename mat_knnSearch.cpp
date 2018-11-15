@@ -1,14 +1,38 @@
+/* Estimator of pair-wise mutual information for two-photon calcium imaging data
+*  Based on the KSG estimator (Kraskov, Stogbauer & Grassberger, 2004, Phys. Rev. E)
+*
+*  Usage:
+*     [I, D, D_shuffled] = mat_knnSearch(deconv, num_shuffles, prctile)
+*
+*  Inputs:
+*     deconv - Deconvolved matrix of calcium time series with ROWS samples and COLS neurons
+*     num_shuffles - number of times to temporally shuffle data (default 1000)
+*     prctile - percentile of null distribution (default 1)
+*
+*  Outputs:
+*     I - 1 x N(N-1)/2 vector of mutual information values
+*     D - normalized mutual information distance  metric
+*     D_shuffled - distance from shuffled distribution
+*
+*  Compilation:
+*     mex CXXFLAGS='$CXXFLAGS -std=c++11 -pthread' -I./boost_1_68_0/ mat_knnSearch.cpp MI.cpp knnSearch.cpp
+*
+*  Written by:
+*  HaoRan Chang, Canadian Centre for Behavioural Neuroscience, University of Lethbridge, Lethbridge, Alberta, Canada, 2018
+*/
+
 #include <stdio.h>
 #include <mex.h>
 #include <matrix.h>
 #include "knnSearch.h"
 #include "MI.h"
 #include <thread>
-#include <chrono>
+#include <mutex>
 
 #define NUMBER_OF_THREADS 16 //tweek the number of threads for best performance on your own system
 
 bool *worker;
+std::mutex *worker_lock = new std::mutex[NUMBER_OF_THREADS];
 int M, N, *index, *count, *ret;
 double *deconv, *sorted, *A, *I;
 
@@ -36,14 +60,23 @@ void opRow(int i, int thread_id){
                 for(k = 0; k < count[i]; k++) ret[thread_id*M*2 + index[i*M + k]] = 0.0; //reset array elements
                 for(k = 0; k < count[j]; k++) ret[thread_id*M*2 + M + index[j*M + k]] = 0.0;
         }
+        worker_lock[thread_id].lock();
         worker[thread_id] = true;
+        worker_lock[thread_id].unlock();
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if(nrhs < 1)
                 mexErrMsgTxt("An input matrix is required");
-        if(nrhs > 1)
+        if(nrhs > 2)
                 mexWarnMsgTxt("Ignoring extra input arguments");
+
+        int shuffles;
+        if(nrhs < 2) {
+                shuffles = 1000;
+                mexPrintf("default option selected - Shuffling data 1000 times\n");
+        }else
+                shuffles = (int) *mxGetPr(prhs[1]);
 
         deconv = mxGetPr(prhs[0]);
         M = mxGetM(prhs[0]);
@@ -98,18 +131,28 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         i = 0;
         while(next_row < (N-1)) {
-                if(worker[i]) {
-                        worker[i] = false;
-                        t[i] = std::thread(opRow, next_row, i);
-                        t[i].detach();
-                        next_row++;
+                if(worker_lock[i].try_lock()) {
+                        if(worker[i]) {
+                                worker[i] = false;
+                                t[i] = std::thread(opRow, next_row, i);
+                                t[i].detach();
+                                next_row++;
+                        }
+                        worker_lock[i].unlock();
                 }
                 i = (i+1) % NUM_THREADS;
         }
 
         for(i = 0; i < NUM_THREADS; i++) {
-                while(!worker[i])
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                while(1) {
+                        if(worker_lock[i].try_lock()) {
+                                if(worker[i]) {
+                                        worker_lock[i].unlock();
+                                        break;
+                                }
+                                worker_lock[i].unlock();
+                        }
+                }
         }
 
         free(A); free(ret); free(index); free(count); free(sorted);

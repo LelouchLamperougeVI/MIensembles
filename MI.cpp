@@ -1,5 +1,17 @@
 #include "MI.h"
 
+double psi(int x){ //digamma function
+        // This series approximation is fairly accurate for x in the interval (2, inf), while smaller x can be estimated via the recusion psi(x+1) = psi(x)/x
+
+        double rval = (double) x;
+        if(x > 1)
+                rval = log(rval) - 1/2/rval - 1/12/std::pow(rval,2) + 1/120/std::pow(rval,4) - 1/252/std::pow(rval,6) + 1/240/std::pow(rval,8) - 5/660/std::pow(rval,10) + 691/32760/std::pow(rval,12) - 1/12/std::pow(rval,14);
+        else
+                rval = psi(x + 1)/rval;
+
+        return rval;
+}
+
 double MI(int *ret, int M, int c1, int c2){
         double I = 0.0;
         int k0 = 0;
